@@ -1,1 +1,60 @@
-still in progress
+import tkinter as tk
+from tkinter import messagebox
+
+
+class TicTacToe:
+    def __init__(self, root):
+        self.root = root
+        self.root.title("Tic-Tac-Toe")
+
+        self.current_player = 'X'
+        self.game_over = False
+
+        # Create a 3x3 grid of buttons
+        self.buttons = [[None for _ in range(3)] for _ in range(3)]
+        for row in range(3):
+            for col in range(3):
+                self.buttons[row][col] = tk.Button(root, text='', font=('Arial', 24), width=5, height=2,
+                                                   command=lambda r=row, c=col: self.make_move(r, c))
+                self.buttons[row][col].grid(row=row, column=col)
+
+    def make_move(self, row, col):
+        if self.game_over or self.buttons[row][col]['text'] != '':
+            return
+
+        self.buttons[row][col]['text'] = self.current_player
+        if self.check_winner():
+            messagebox.showinfo("Game Over", f"Player {self.current_player} wins!")
+            self.game_over = True
+        elif self.is_board_full():
+            messagebox.showinfo("Game Over", "It's a draw!")
+            self.game_over = True
+        else:
+            self.current_player = 'O' if self.current_player == 'X' else 'X'  # Switch player
+
+    def check_winner(self):
+        # Check rows, columns, and diagonals
+        for row in range(3):
+            if self.buttons[row][0]['text'] == self.buttons[row][1]['text'] == self.buttons[row][2]['text'] != '':
+                return True
+        for col in range(3):
+            if self.buttons[0][col]['text'] == self.buttons[1][col]['text'] == self.buttons[2][col]['text'] != '':
+                return True
+        if self.buttons[0][0]['text'] == self.buttons[1][1]['text'] == self.buttons[2][2]['text'] != '':
+            return True
+        if self.buttons[0][2]['text'] == self.buttons[1][1]['text'] == self.buttons[2][0]['text'] != '':
+            return True
+        return False
+
+    def is_board_full(self):
+        for row in range(3):
+            for col in range(3):
+                if self.buttons[row][col]['text'] == '':
+                    return False
+        return True
+
+
+if __name__ == '__main__':
+    root = tk.Tk()
+    game = TicTacToe(root)
+    root.mainloop()
