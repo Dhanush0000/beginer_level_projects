@@ -1,60 +1,261 @@
-import tkinter as tk
-from tkinter import messagebox
+import javax.swing.*;
+import java.awt.*;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
+import java.util.Random;
 
+public class TicTacToeGUI extends JFrame {
 
-class TicTacToe:
-    def __init__(self, root):
-        self.root = root
-        self.root.title("Tic-Tac-Toe")
+    private static final int SIZE = 3;  // The size of the board
+    private JButton[][] buttons = new JButton[SIZE][SIZE];  // Array of buttons for the game grid
+    private char currentPlayer = 'X';  // Player X starts
+    private boolean gameWon = false;
+    private boolean isSinglePlayer = true;  // Flag to check if single player mode is enabled
+    private JLabel statusLabel;
+    private int playerScore = 0, computerScore = 0;  // Scores for player and computer
+    private Random random = new Random();  // Random move generator for the AI
 
-        self.current_player = 'X'
-        self.game_over = False
+    // Constructor to set up the GUI
+    public TicTacToeGUI() {
+        setTitle("Tic-Tac-Toe");
+        setSize(500, 700);  // Increased window size for score display
+        setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        setLayout(new BorderLayout());  // Use BorderLayout for better component placement
 
-        # Create a 3x3 grid of buttons
-        self.buttons = [[None for _ in range(3)] for _ in range(3)]
-        for row in range(3):
-            for col in range(3):
-                self.buttons[row][col] = tk.Button(root, text='', font=('Arial', 24), width=5, height=2,
-                                                   command=lambda r=row, c=col: self.make_move(r, c))
-                self.buttons[row][col].grid(row=row, column=col)
+        // Status label to display the current player or game status
+        statusLabel = new JLabel("Player X's turn", JLabel.CENTER);
+        statusLabel.setFont(new Font("Arial", Font.BOLD, 20));
+        statusLabel.setPreferredSize(new Dimension(500, 50));
+        add(statusLabel, BorderLayout.NORTH);
 
-    def make_move(self, row, col):
-        if self.game_over or self.buttons[row][col]['text'] != '':
-            return
+        // Score label
+        JPanel scorePanel = new JPanel();
+        scorePanel.setLayout(new FlowLayout());
+        JLabel scoreLabel = new JLabel("Player X: 0  |  Computer O: 0");
+        scoreLabel.setFont(new Font("Arial", Font.PLAIN, 18));
+        scorePanel.add(scoreLabel);
+        add(scorePanel, BorderLayout.SOUTH);
 
-        self.buttons[row][col]['text'] = self.current_player
-        if self.check_winner():
-            messagebox.showinfo("Game Over", f"Player {self.current_player} wins!")
-            self.game_over = True
-        elif self.is_board_full():
-            messagebox.showinfo("Game Over", "It's a draw!")
-            self.game_over = True
-        else:
-            self.current_player = 'O' if self.current_player == 'X' else 'X'  # Switch player
+        JPanel boardPanel = new JPanel(new GridLayout(SIZE, SIZE));
+        // Initialize buttons and add action listeners
+        for (int row = 0; row < SIZE; row++) {
+            for (int col = 0; col < SIZE; col++) {
+                buttons[row][col] = new JButton("");
+                buttons[row][col].setFont(new Font("Arial", Font.PLAIN, 60));
+                buttons[row][col].setFocusPainted(false);
+                buttons[row][col].setBackground(new Color(240, 240, 240));
+                buttons[row][col].setForeground(Color.BLACK);
+                buttons[row][col].setEnabled(true);
+                buttons[row][col].addActionListener(new ButtonClickListener(row, col));
+                boardPanel.add(buttons[row][col]);
+            }
+        }
 
-    def check_winner(self):
-        # Check rows, columns, and diagonals
-        for row in range(3):
-            if self.buttons[row][0]['text'] == self.buttons[row][1]['text'] == self.buttons[row][2]['text'] != '':
-                return True
-        for col in range(3):
-            if self.buttons[0][col]['text'] == self.buttons[1][col]['text'] == self.buttons[2][col]['text'] != '':
-                return True
-        if self.buttons[0][0]['text'] == self.buttons[1][1]['text'] == self.buttons[2][2]['text'] != '':
-            return True
-        if self.buttons[0][2]['text'] == self.buttons[1][1]['text'] == self.buttons[2][0]['text'] != '':
-            return True
-        return False
+        add(boardPanel, BorderLayout.CENTER);
 
-    def is_board_full(self):
-        for row in range(3):
-            for col in range(3):
-                if self.buttons[row][col]['text'] == '':
-                    return False
-        return True
+        // Panel for additional buttons (like reset)
+        JPanel controlPanel = new JPanel();
+        controlPanel.setLayout(new FlowLayout());
+        JButton resetButton = new JButton("Reset");
+        resetButton.addActionListener(e -> resetGame());
+        controlPanel.add(resetButton);
 
+        // Add a single-player toggle
+        JCheckBox singlePlayerCheckBox = new JCheckBox("Single Player");
+        singlePlayerCheckBox.setSelected(true);
+        singlePlayerCheckBox.addActionListener(e -> isSinglePlayer = singlePlayerCheckBox.isSelected());
+        controlPanel.add(singlePlayerCheckBox);
 
-if __name__ == '__main__':
-    root = tk.Tk()
-    game = TicTacToe(root)
-    root.mainloop()
+        add(controlPanel, BorderLayout.EAST);
+    }
+
+    // ActionListener for button clicks
+    private class ButtonClickListener implements ActionListener {
+        private int row, col;
+
+        public ButtonClickListener(int row, int col) {
+            this.row = row;
+            this.col = col;
+        }
+
+        @Override
+        public void actionPerformed(ActionEvent e) {
+            if (!gameWon && buttons[row][col].getText().equals("")) {
+                buttons[row][col].setText(String.valueOf(currentPlayer));
+                animateButtonPress(row, col);  // Add animation on button press
+                if (checkWinner()) {
+                    if (currentPlayer == 'X') {
+                        playerScore++;
+                    } else {
+                        computerScore++;
+                    }
+                    updateScoreLabel();
+                    JOptionPane.showMessageDialog(null, "Player " + currentPlayer + " wins!");
+                    gameWon = true;
+                    statusLabel.setText("Player " + currentPlayer + " wins!");
+                } else if (isBoardFull()) {
+                    JOptionPane.showMessageDialog(null, "It's a draw!");
+                    statusLabel.setText("It's a draw!");
+                } else {
+                    currentPlayer = (currentPlayer == 'X') ? 'O' : 'X';  // Switch players
+                    statusLabel.setText("Player " + currentPlayer + "'s turn");
+
+                    // If in single-player mode and it's the AI's turn, make the AI move
+                    if (isSinglePlayer && currentPlayer == 'O') {
+                        makeComputerMove();
+                    }
+                }
+            }
+        }
+    }
+
+    // Check if the current player has won
+    private boolean checkWinner() {
+        // Check rows and columns
+        for (int i = 0; i < SIZE; i++) {
+            if (buttons[i][0].getText().equals(String.valueOf(currentPlayer)) &&
+                    buttons[i][1].getText().equals(String.valueOf(currentPlayer)) &&
+                    buttons[i][2].getText().equals(String.valueOf(currentPlayer))) {
+                return true;
+            }
+            if (buttons[0][i].getText().equals(String.valueOf(currentPlayer)) &&
+                    buttons[1][i].getText().equals(String.valueOf(currentPlayer)) &&
+                    buttons[2][i].getText().equals(String.valueOf(currentPlayer))) {
+                return true;
+            }
+        }
+        // Check diagonals
+        if (buttons[0][0].getText().equals(String.valueOf(currentPlayer)) &&
+                buttons[1][1].getText().equals(String.valueOf(currentPlayer)) &&
+                buttons[2][2].getText().equals(String.valueOf(currentPlayer))) {
+            return true;
+        }
+        if (buttons[0][2].getText().equals(String.valueOf(currentPlayer)) &&
+                buttons[1][1].getText().equals(String.valueOf(currentPlayer)) &&
+                buttons[2][0].getText().equals(String.valueOf(currentPlayer))) {
+            return true;
+        }
+        return false;
+    }
+
+    // Check if the board is full
+    private boolean isBoardFull() {
+        for (int row = 0; row < SIZE; row++) {
+            for (int col = 0; col < SIZE; col++) {
+                if (buttons[row][col].getText().equals("")) {
+                    return false;
+                }
+            }
+        }
+        return true;
+    }
+
+    // Make the computer (AI) move using the Minimax algorithm
+    private void makeComputerMove() {
+        if (gameWon) return;
+
+        int[] bestMove = minimax(2);  // AI is player 'O'
+        buttons[bestMove[0]][bestMove[1]].setText(String.valueOf(currentPlayer));
+        animateButtonPress(bestMove[0], bestMove[1]);  // Add animation on button press
+        if (checkWinner()) {
+            JOptionPane.showMessageDialog(null, "Player " + currentPlayer + " wins!");
+            gameWon = true;
+            statusLabel.setText("Player " + currentPlayer + " wins!");
+        } else if (isBoardFull()) {
+            JOptionPane.showMessageDialog(null, "It's a draw!");
+            statusLabel.setText("It's a draw!");
+        } else {
+            currentPlayer = 'X';  // Switch back to human
+            statusLabel.setText("Player " + currentPlayer + "'s turn");
+        }
+    }
+
+    // Minimax algorithm to find the best move for the computer (Player 'O')
+    private int[] minimax(int depth) {
+        int bestScore = Integer.MIN_VALUE;
+        int[] bestMove = new int[2];
+
+        // Try every empty spot on the board
+        for (int row = 0; row < SIZE; row++) {
+            for (int col = 0; col < SIZE; col++) {
+                if (buttons[row][col].getText().equals("")) {
+                    buttons[row][col].setText(String.valueOf(currentPlayer));
+                    int score = minimaxScore(depth, false);
+                    buttons[row][col].setText("");  // Undo the move
+
+                    if (score > bestScore) {
+                        bestScore = score;
+                        bestMove[0] = row;
+                        bestMove[1] = col;
+                    }
+                }
+            }
+        }
+
+        return bestMove;
+    }
+
+    // Minimax scoring function
+    private int minimaxScore(int depth, boolean isMaximizing) {
+        if (checkWinner()) {
+            return isMaximizing ? -1 : 1;  // AI loses or wins
+        }
+        if (isBoardFull()) {
+            return 0;  // Draw
+        }
+
+        int bestScore = isMaximizing ? Integer.MIN_VALUE : Integer.MAX_VALUE;
+
+        for (int row = 0; row < SIZE; row++) {
+            for (int col = 0; col < SIZE; col++) {
+                if (buttons[row][col].getText().equals("")) {
+                    buttons[row][col].setText(isMaximizing ? "O" : "X");
+                    int score = minimaxScore(depth + 1, !isMaximizing);
+                    buttons[row][col].setText("");  // Undo the move
+
+                    if (isMaximizing) {
+                        bestScore = Math.max(score, bestScore);
+                    } else {
+                        bestScore = Math.min(score, bestScore);
+                    }
+                }
+            }
+        }
+
+        return bestScore;
+    }
+
+    // Animate button press by changing its background color temporarily
+    private void animateButtonPress(int row, int col) {
+        Color originalColor = buttons[row][col].getBackground();
+        buttons[row][col].setBackground(new Color(200, 255, 200));  // Light green for press
+        Timer timer = new Timer(100, e -> buttons[row][col].setBackground(originalColor));
+        timer.setRepeats(false);
+        timer.start();
+    }
+
+    // Update the score label
+    private void updateScoreLabel() {
+        ((JLabel) ((JPanel) getContentPane().getComponent(1)).getComponent(0)).setText("Player X: " + playerScore + "  |  Computer O: " + computerScore);
+    }
+
+    // Reset the game to its initial state
+    private void resetGame() {
+        for (int row = 0; row < SIZE; row++) {
+            for (int col = 0; col < SIZE; col++) {
+                buttons[row][col].setText("");
+                buttons[row][col].setEnabled(true);
+            }
+        }
+        currentPlayer = 'X';
+        gameWon = false;
+        statusLabel.setText("Player X's turn");
+    }
+
+    public static void main(String[] args) {
+        SwingUtilities.invokeLater(() -> {
+            TicTacToeGUI game = new TicTacToeGUI();
+            game.setVisible(true);
+        });
+    }
+}
